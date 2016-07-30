@@ -8,11 +8,12 @@ $(function() {
 	style = $('<style type="text/css">'),
 	d3 = $('<script src="https://d3js.org/d3.v3.min.js" charset="utf-8">');
 
-
+	// adding my own scripts and styles
 	$('head').append(d3);
 	$(style).html(css);
 	$('head').append(style);
-
+	
+	// make sure the script doesn't run before the page is finished loading drives
 	var startScript = setInterval(function() {
 		if(coordsAll) {
 			clearInterval(startScript);
@@ -44,6 +45,8 @@ function buildSpeedGraph () {
 	$(speedGraph).append(sgClose);
 
 	console.log('Building speed graph..');
+	// compile all the speeds, durations, distances into their own objects, sorted by timestamp
+	// using a seperate array for overall speed
 	for(date in coordsAll) {
 		if(!speedByTimestamp[date]) {
 			speedByTimestamp[date] = []
@@ -64,6 +67,7 @@ function buildSpeedGraph () {
 		});
 	}
 
+	// make an object for each drive and push them all into one array that can easily be used for d3 charts
 	for(keys in speedByTimestamp) {
 		var driveSum = speedByTimestamp[keys].reduce(function(a,b) {return a + b;}),
 			driveAvg = driveSum/speedByTimestamp[keys].length,
@@ -76,6 +80,7 @@ function buildSpeedGraph () {
 		d3Data.push({timestamp: keys, driveAvg: +driveAvg, driveMax: +driveMax, distance: +distByTimestamp[keys].toFixed(2), duration: +durByTime[keys].toFixed(2)});
 	}
 
+	// sort drives by timestamp
 	d3Data.sort(function(a,b) {
 		var aTime = a.timestamp.substr(0,10) + a.timestamp.substr(12),
 			bTime = b.timestamp.substr(0,10) + b.timestamp.substr(12);
@@ -90,6 +95,7 @@ function buildSpeedGraph () {
 		return 0;
 	});
 
+	// only use 80 most recent drives
 	if(d3Data.length > 80) d3Data.splice(0, d3Data.length - 80);
 
 	speedArr.sort(function(a,b) {
@@ -115,7 +121,7 @@ function buildSpeedGraph () {
 	$(speedGraph).append(chart);
 	$('body').append(speedGraph);
 
-//--
+//-- d3 madness begins here
 	var margin = {top: 20, right: 30, bottom: 40, left: 40},
     width = $('#speedGraph').width() - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
@@ -172,7 +178,7 @@ function buildSpeedGraph () {
       .attr("dy", ".71em")
       .style("text-anchor", "end")
       .text("mph");
-
+// make the bar graph of avg speed/drive
 	  chart.selectAll(".bar")
 	      .data(d3Data)
 	    .enter().append("rect")
@@ -196,7 +202,7 @@ function buildSpeedGraph () {
             });
 
 			var barWidth = $(".bar").attr("width");
-
+// make the line graph of max speed/drive
 			var line = d3.svg.line()
 			    .x(function(d) { return x(d.timestamp) + barWidth/2 - 1; })
 			    .y(function(d) { return y(d.driveMax); })
